@@ -1,14 +1,30 @@
+import { db } from '../db';
+import { spendingEntriesTable } from '../db/schema';
 import { type CreateSpendingEntryInput, type SpendingEntry } from '../schema';
 
 export const createSpendingEntry = async (input: CreateSpendingEntryInput): Promise<SpendingEntry> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new spending entry and persisting it in the database.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
-        date: input.date,
+  try {
+    // Insert spending entry record
+    const result = await db.insert(spendingEntriesTable)
+      .values({
+        date: input.date.toISOString().split('T')[0], // Convert Date to string for date column
         category: input.category,
-        amount: input.amount,
-        description: input.description,
-        created_at: new Date() // Placeholder date
-    } as SpendingEntry);
+        amount: input.amount.toString(), // Convert number to string for numeric column
+        description: input.description
+      })  
+      .returning()
+      .execute();
+
+    // Convert numeric fields back to numbers before returning
+    const entry = result[0];
+    return {
+      ...entry,
+      amount: parseFloat(entry.amount), // Convert string back to number
+      date: new Date(entry.date), // Convert string back to Date
+      created_at: new Date(entry.created_at) // Ensure proper Date object
+    };
+  } catch (error) {
+    console.error('Spending entry creation failed:', error);
+    throw error;
+  }
 };
